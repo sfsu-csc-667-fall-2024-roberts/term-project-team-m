@@ -3,7 +3,7 @@
 
 ## Team Members
 
-- John Collin
+- John Collins
 - Bilguun Bayasgalan
 - Min Myat Oo
 - Aditya Mohan
