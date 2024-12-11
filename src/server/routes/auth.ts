@@ -15,7 +15,7 @@ async function handleLogin(event: SubmitEvent): Promise<void> {
       });
   
       if (response.ok) {
-        window.location.href = "/lobby.html";
+        window.location.href = "/lobby.ejs";
       } else {
         const errorMessage = await response.text();
         alert(`Login failed: ${errorMessage}`);
@@ -50,7 +50,7 @@ async function handleLogin(event: SubmitEvent): Promise<void> {
   
       if (response.ok) {
         alert("Signup successful! Please log in.");
-        window.location.href = "/login.html";
+        window.location.href = "/login.ejs";
       } else {
         const errorMessage = await response.text();
         alert(`Signup failed: ${errorMessage}`);
