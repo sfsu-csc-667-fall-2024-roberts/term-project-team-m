@@ -1,67 +1,50 @@
-// Function to handle the login form submission
-async function handleLogin(event: SubmitEvent): Promise<void> {
-    event.preventDefault(); // Prevent the default form submission behavior
-    const form = event.target as HTMLFormElement;
-  
-    // Collect username and password
-    const username = (form.querySelector("#username") as HTMLInputElement).value;
-    const password = (form.querySelector("#password") as HTMLInputElement).value;
-  
-    try {
-      const response = await fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-  
-      if (response.ok) {
-        window.location.href = "/lobby.ejs";
-      } else {
-        const errorMessage = await response.text();
-        alert(`Login failed: ${errorMessage}`);
-      }
-    } catch (error) {
-      console.error("Error during login:", error);
-      alert("An error occurred. Please try again.");
-    }
-  }
-  
-  async function handleSignup(event: SubmitEvent): Promise<void> {
-    event.preventDefault(); 
-    const form = event.target as HTMLFormElement;
-  
-    // Collect username, password, and confirm password
-    const username = (form.querySelector("#username") as HTMLInputElement).value;
-    const password = (form.querySelector("#password") as HTMLInputElement).value;
-    const confirmPassword = (form.querySelector("#confirmPassword") as HTMLInputElement).value;
-  
-    // Validate password confirmation
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
-      return;
-    }
-  
-    try {
-      const response = await fetch("/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-  
-      if (response.ok) {
-        alert("Signup successful! Please log in.");
-        window.location.href = "/login.ejs";
-      } else {
-        const errorMessage = await response.text();
-        alert(`Signup failed: ${errorMessage}`);
-      }
-    } catch (error) {
-      console.error("Error during signup:", error);
-      alert("An error occurred. Please try again.");
-    }
-  }
-  
+import express from 'express';
+import bcrypt from 'bcrypt';
+import { Pool } from 'pg';
 
-  document.querySelector("form[action='/login']")?.addEventListener("submit", handleLogin);
-  document.querySelector("form[action='/signup']")?.addEventListener("submit", handleSignup);
-  
+const router = express.Router();
+const db = new Pool({ connectionString: 'your-database-connection-string' });
+
+//Route for user registration 
+router.post('/register', async (req, res) => {
+  const { username, email, password } = req.body;
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await db.query(
+      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
+      [username, email, hashedPassword]
+    );
+    req.session.user = result.rows[0];
+    res.redirect('/lobby');
+  } catch (error) {
+    console.error(error);
+    res.redirect('/register');
+  }
+});
+
+// route for logging in 
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (isMatch) {
+        req.session.user = { id: user.id, username: user.username, email: user.email };
+        return res.redirect('/lobby');
+      }
+    }
+    res.redirect('/login');
+  } catch (error) {
+    console.error(error);
+    res.redirect('/login');
+  }
+});
+
+// Route for logout
+router.get('/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/login'));
+});
+
+export default router;
