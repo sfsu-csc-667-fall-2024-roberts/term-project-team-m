@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { Pool } from 'pg';
 
 const router = express.Router();
-const db = new Pool({ connectionString: 'your-database-connection-string' });
+const db = new Pool({ connectionString: 'To add db connection' }); //Todo:: db connection 
 
 //Route for user registration 
 router.post('/register', async (req, res) => {
@@ -14,7 +14,7 @@ router.post('/register', async (req, res) => {
       'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
       [username, email, hashedPassword]
     );
-    req.session.user = result.rows[0];
+    (req.session as any).user = result.rows[0];
     res.redirect('/lobby');
   } catch (error) {
     console.error(error);
@@ -31,7 +31,7 @@ router.post('/login', async (req, res) => {
       const user = result.rows[0];
       const isMatch = await bcrypt.compare(password, user.password);
       if (isMatch) {
-        req.session.user = { id: user.id, username: user.username, email: user.email };
+        (req.session as any).user  = { id: user.id, username: user.username, email: user.email };
         return res.redirect('/lobby');
       }
     }

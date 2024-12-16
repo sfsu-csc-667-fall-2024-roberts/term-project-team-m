@@ -6,9 +6,9 @@ import morgan from "morgan";
 import * as path from "path";
 import connectLiveReload from "connect-livereload";
 import livereload from "livereload";
-
 import rootRoutes from "./routes/root";
-
+import authenticationMiddleware from "./middleware/authentication";
+import authRoutes from "./routes/auth";
 dotenv.config();
 
 const app = express();
@@ -24,7 +24,8 @@ app.set("views", path.join(process.cwd(), "src", "server", "views"));
 app.set("view engine", "ejs");
 
 app.use("/", rootRoutes);
-
+app.use(authenticationMiddleware);
+app.use("/", authRoutes);
 app.use((_request, _response, next) => {
   next(httpErrors(404));
 });
