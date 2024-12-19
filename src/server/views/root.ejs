@@ -77,15 +77,11 @@
   <body>
     <div class="welcome-container">
       <h1 class="welcome-title">Golf</h1>
-      <p class="welcome-text">
-        Welcome <span class="welcome-name"><%= name %></span>! Ready to join the
-        game?
-      </p>
-      <a href="/lobby" class="button">Enter Game Lobby</a>
+      <p class="welcome-text">Welcome! Ready to join the game?</p>
+      <a href="/login" class="button">Enter Game Lobby</a>
     </div>
 
     <script>
-      // Add a simple animation when the page loads
       document.addEventListener("DOMContentLoaded", () => {
         const container = document.querySelector(".welcome-container");
         container.style.opacity = "0";

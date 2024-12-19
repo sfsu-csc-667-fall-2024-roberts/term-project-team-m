@@ -14,6 +14,11 @@ router.get("/lobby", (_request, response) => {
     title: "TEAM M Site",
   });
 });
+router.get("/game", (_request, response) => {
+  response.render("game", {
+    title: "TEAM M Site",
+  });
+});
 
 router.get("/login", (_request, response) => {
   response.render("login", {
