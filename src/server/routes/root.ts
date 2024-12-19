@@ -26,4 +26,9 @@ router.get("/register", (_request, response) => {
     title: "TEAM M Site",
   });
 });
+router.get("/account", (_request, response) => {
+  response.render("account", {
+    title: "TEAM M Site",
+  });
+});
 export default router;
