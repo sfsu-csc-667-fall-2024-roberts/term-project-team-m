@@ -15,4 +15,15 @@ router.get("/lobby", (_request, response) => {
   });
 });
 
+router.get("/login", (_request, response) => {
+  response.render("login", {
+    title: "TEAM M Site",
+  });
+});
+
+router.get("/register", (_request, response) => {
+  response.render("register", {
+    title: "TEAM M Site",
+  });
+});
 export default router;
