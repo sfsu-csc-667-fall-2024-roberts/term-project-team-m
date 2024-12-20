@@ -1,0 +1,42 @@
+<!-- THIS IS WHERE IT GETS EACH OF THE AVAILABLE GAMES FROM THE DATABASE AND SLAPS THEM ON THE PAGE IN ONE BIG GRID -->
+<!-- Also added myGames and Spectateable games, which are populated via queries in db/games/index.js -->
+
+
+<!-- Available Games -->
+<h2 class="text-lg font-medium text-gray-900" style="margin-top: 30px; color:rgb(37, 30, 255)">Available Games to Join</h2>
+<% if (availableGames.length === 0) { %>
+  <p class="mt-3 text-sm text-gray-500">No available games at the moment.</p>
+<% } else { %>
+  <ul role="list" class="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2">
+    <% availableGames.forEach(game => { %>
+      <%- include("available-game", { game }) %>
+    <% }) %>
+  </ul>
+<% } %>
+<hr class="my-6 border-blue-500" style="border-bottom-width: 2px; margin-bottom: 30px; margin-top: 30px;">
+
+<!-- My Games -->
+<h2 class="text-lg font-medium text-gray-900 mt-8" style = "color: rgb(0, 120, 0)">My Active Games</h2>
+<% if (myGames.length === 0) { %>
+  <p class="mt-3 text-sm text-gray-500">You are not currently participating in any games.</p>
+<% } else { %>
+  <ul role="list" class="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2">
+    <% myGames.forEach(game => { %>
+      <%- include("my-game", { game }) %>
+    <% }) %>
+  </ul>
+<% } %>
+<hr class="my-6 border-blue-500" style="border-bottom-width: 2px; margin-bottom: 30px; margin-top: 30px;">
+
+<!-- Spectate Games -->
+<h2 class="text-lg font-medium text-gray-900 mt-8" style = "color: rgb(230, 115, 0)">Spectate Other Player's Games</h2>
+<% if (spectateGames.length === 0) { %>
+  <p class="mt-3 text-sm text-gray-500">No games available to spectate.</p>
+<% } else { %>
+  <ul role="list" class="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2">
+    <% spectateGames.forEach(game => { %>
+      <%- include("spectate-game", { game }) %>
+    <% }) %>
+  </ul>
+<% } %>
+<hr class="my-6 border-blue-500" style="border-bottom-width: 2px; margin-bottom: 30px; margin-top: 30px;">

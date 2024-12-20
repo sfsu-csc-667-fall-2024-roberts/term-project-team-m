@@ -1,0 +1,617 @@
+<!--
+Author: Stephen Martel
+Date: 4/15/2024
+File Purpose:
+Early Draft version of the game in an HTML document, with javascript implementing the game logic
+I wanted to get the game logic set up and working before trying to integrate it with the database
+
+Description: 
+This HTML file contains the early draft logic for the shithead card game.
+The game logic includes functions for starting the game, creating the deck, shuffling the deck,
+managing player hands, playing cards, updating the UI, and handling game state transitions (start of game, game over).
+Additionally, error messages are displayed to inform players about invalid moves.
+Players can interact with the game by clicking on cards in their hand to try and play them,
+and click on the pile to pick it up.
+The game continues until all but one player's hand is empty (and that last player is the ... shithead).
+
+The game follows the rules of the version of Shithead that I learned from a friend overseas.
+With the special cards, 2, 8, 9, 10. Where 2, 8, 10 can be played on anything, but 9 requires it to be 9 or lower
+2 sets the value of the pile to 2, so it's a value "reset" so you can play low cards again
+8 is essentially invisible, and it stores the value of the thing played before it,
+so the card sequence K -> 8,  the 8 would equal the king (13), so you'd have to play a K or A to beat it (or a special card)
+10 destroys the pile and the player who played it gets to go again
+9 is a high-value nullifier, as it requires a 9 or lower to be played on it (so you can't play a J, K, Q, A)
+
+________________
+TO DO :
+________________
+REQUIRED FEATURES:
+
+REQUIRED LATER
+* Add Face Up and Face Down cards
+* Add the ability to play multiple of the same card in the same turn
+
+WOULD LIKE TO HAVES:
+* Migrate javascript to an external file, and call it here, so users can't modify the code by editing
+* Add the ability to have more or less than 3 players
+Add an AI player option
+* Hard difficulty would do the most optimal move always, like pick the lowest value thing in it's hand to get rid of those first
+* Normal difficulty would intentionally sometimes do bad moves (like pick randomly from the list of possible moves)
+
+
+Finished to do's:
+* Cards respect expected rules
+* If a players hand is empty and they have no face down or face ups, they are a "winner" and are no longer involved in the game
+                        ^ Skip the above players turn if that is the case
+* Add the quartets functionality, if there are 4 of the same card in a row on the pile,
+  then destroy the pile and the current player goes again
+* Have hands sorted by numerical value
+
+
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Game Logic Early Drafting</title>
+    <!-- -->
+    <link rel="stylesheet" href="../css/draftGame.css">
+
+
+    <!-- Experimental to try and get the included main.css to work with this -->
+    <!-- Include Tailwind CSS -->
+    <!-- 
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/draftGamePlusMain.css">
+    -->
+
+
+</head>
+
+<body>
+    <div id="game">
+        <button id="start-game" onclick="startGame()">Start Game</button> <!-- Click this to start the game -->
+        <div id="current-player"></div> <!-- Div for saying what the current player is -->
+        <div id="player-hand" class="hand"></div> <!-- Div for displaying the cards in the players hand -->
+
+        <div id="pile" class="hand"></div>
+        <!-- Div for displaying the cards in the pile (rightmost card is the top active one) -->
+
+        <div id="pile-value" class="pile-value"></div>
+        <!-- Debugging Div for displaying the current value on the pile -->
+
+        <div id="error-message"></div>
+        <!-- Div that will hold the error message if you tried and failed to play a card -->
+
+        <div id="deck-info"></div> <!-- Div that tells you how many cards are still in the deck you're drawing from -->
+        <div id="player-hands"></div>
+        <!-- Div that shows ALL player hands for debugging purposes (normally you wouldn't see these) -->
+    </div>
+
+    <!-- Javascript functionality code -->
+    <script>
+        const AlwaysPlayableSpecialCards = ['2', '8', '10']; // Cards that you can always play on ANYTHING
+        const RuleRespectingCards = ['3', '4', '5', '6', '7', '9', 'J', 'Q', 'K', 'A']; // Cards that respect numerical heirarchy
+
+        // Create the holder for the deck of cards that players will draw from
+        let deck = [];
+
+        // Variable used to store the cards played to the pile
+        let pile = [];
+        // Set the current pile value to null, also declared here outside the functions so it's accessible easily by all functions
+        let pileValue = null;
+
+        // Variable used to track who's turn it is
+        let currentPlayerIndex = 0;
+
+        // Array that will hold the player names (eventually will need to retrieve these from the joining players)
+        let players = ['Player 1', 'Player 2', 'Player 3'];
+        let playerHands = [];
+
+        // Event listener for the pile element, when they click on it, pick it up to add to player hand
+        document.getElementById('pile').addEventListener('click', pickUpPile);
+
+        // Function to start, and continuously run the game until a "loser", the "shithead" is reached
+        function startGame() {
+            // Create the deck of cards that players will draw from
+            deck = createDeck();
+
+            // Shuffle the deck so it's not in the same order it was created in
+            shuffle(deck);
+
+            // Set player hands to empty
+            playerHands = [];
+            // For each player fill their starting hands, face-ups, and face-downs
+            for (let i = 0; i < players.length; i++) {
+                playerHands.push({
+                    hand: [],
+                    faceUp: [],
+                    faceDown: []
+                });
+
+                // Draw 3 cards to hand, face-up, and face-down for each player
+                for (let j = 0; j < 3; j++) {
+                    drawCardToHand(playerHands[i].hand); // Draw a card to the current player's hand
+                    drawCardToHand(playerHands[i].faceUp); // Draw a card to the current player's face-up cards
+                    drawCardToHand(playerHands[i].faceDown); // Draw a card to the current player's face-down cards
+                }
+            }
+
+            // Call these functions to show the interface
+            displayCurrentPlayerHand(playerHands);
+            displayAllPlayerHands(playerHands, players);
+            displayCurrentPlayer();
+            displayRemainingCardsInDrawDeck();
+            // Console message to indicate the game is ready to play
+            console.log(`Welcome to Shithead! ${players[currentPlayerIndex]} goes first.`);
+        }
+
+        // Create a deck containing the cards from the two card arrays
+        // Currently suits are not shown or relevant to the card game but they can be displayed in the final version later
+        function createDeck() {
+            const suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
+            const deck = [];
+            for (const suit of suits) {
+                for (const value of RuleRespectingCards) {
+                    deck.push({ suit, value });
+                }
+                for (const value of AlwaysPlayableSpecialCards) {
+                    deck.push({ suit, value });
+                }
+            }
+            return deck;
+        }
+
+        // Function that calls the other UI related functions to quickly refresh the interface
+        function updateUI() {
+            // Sort the player's hand whenever updateUI is called
+            sortPlayerHand(playerHands[currentPlayerIndex]);
+
+            // Once sorted, run all the other UI related functions
+            displayCurrentPlayerHand(playerHands);
+            displayPile();
+            displayPileValue();
+            displayCurrentPlayer();
+            displayRemainingCardsInDrawDeck();
+            displayAllPlayerHands(playerHands, players);
+        }
+
+        // Add the cards in the pile to the div for display purposes
+        function displayPile() {
+            const pileElement = document.getElementById('pile');
+            pileElement.innerHTML = '';
+            pile.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card', card.value, card.suit.toLowerCase()); // Add value and suit classes for the CSS
+
+                // Create a <span> element to hold the card content as described in the http://jyaus.github.io/css-playing-cards/
+                const spanElement = document.createElement('span');
+                spanElement.textContent = getCardDisplayName(card);
+
+                // Append the <span> to the card element
+                cardElement.appendChild(spanElement);
+
+                pileElement.appendChild(cardElement);
+            });
+        }
+
+        // Function that gets the current pile value so the player knows what they need to match or beat
+        function displayPileValue() {
+            const pileValueElement = document.getElementById('pile-value');
+            pileValueElement.textContent = `Pile Value: ${pileValue !== null ? pileValue : 'None'}`;
+        }
+
+        // Self explanatory
+        function displayRemainingCardsInDrawDeck() {
+            const remainingCardsElement = document.getElementById('deck-info');
+            remainingCardsElement.textContent = `Remaining cards in deck: ${deck.length}`;
+        }
+
+        // Function to sort the cards in a player's hand by value for quality of life and my sanity when debugging
+        function sortPlayerHand(playerHand) {
+            // The order the sort will follow (left to right)
+            const cardOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+            // Sort the hand based on the above array
+            playerHand.hand.sort((a, b) => cardOrder.indexOf(a.value) - cardOrder.indexOf(b.value));
+        }
+
+        // Function to create card element based on card object
+        function createCardElement(card, isFaceDown = false) {
+            const cardElement = document.createElement('div');
+            cardElement.classList.add('card', 'player-card', card.value, card.suit.toLowerCase());
+
+            // Create a <span> element to hold the card content
+            const spanElement = document.createElement('span');
+            spanElement.textContent = isFaceDown ? '??' : getCardDisplayName(card); // Display '??' for face-down cards
+
+            // Append the <span> to the card element
+            cardElement.appendChild(spanElement);
+
+            return cardElement;
+        }
+
+        // Put the cards that are in the players hand into the div so they can see them visually instead of having to read the console
+        function displayCurrentPlayerHand(playerHands) {
+            const playerHandElement = document.getElementById('player-hand');
+            playerHandElement.innerHTML = '';
+
+            const currentPlayerHand = playerHands[currentPlayerIndex];
+
+            /*
+            // Display face-up cards
+            currentPlayerHand.faceUp.forEach((card, index) => {
+                const cardElement = createCardElement(card);
+                playerHandElement.appendChild(cardElement);
+            });
+
+            // Display face-down cards
+            currentPlayerHand.faceDown.forEach((card, index) => {
+                const cardElement = createCardElement(card, true); // Pass true to indicate face-down card
+                playerHandElement.appendChild(cardElement);
+            });
+            */
+
+            // Display hand
+            currentPlayerHand.hand.forEach((card, index) => {
+                const cardElement = createCardElement(card);
+                cardElement.addEventListener('click', () => playCard(index));
+                playerHandElement.appendChild(cardElement);
+            });
+
+            console.log(`Player ${currentPlayerIndex + 1}'s hand:`, currentPlayerHand.hand.map(card => getCardDisplayName(card)));
+        }
+
+        // Used to display all player hands in that div so I can debug this to make sure that everything is working properly
+        function displayAllPlayerHands(playerHands, players) {
+            const playerHandsElement = document.getElementById('player-hands');
+            playerHandsElement.innerHTML = '';
+
+            playerHands.forEach((playerHand, index) => {
+                const playerHandDiv = document.createElement('div');
+                const playerName = document.createElement('h3');
+                playerName.textContent = players[index];
+                playerHandDiv.appendChild(playerName);
+
+                // Display hand
+                const handDiv = document.createElement('div');
+                handDiv.textContent = "Hand: " + playerHand.hand.map(card => getCardDisplayName(card)).join(', ');
+                playerHandDiv.appendChild(handDiv);
+
+                // Display face-up cards
+                const faceUpDiv = document.createElement('div');
+                faceUpDiv.textContent = "Face-Up: " + playerHand.faceUp.map(card => getCardDisplayName(card)).join(', ');
+                playerHandDiv.appendChild(faceUpDiv);
+
+                // Display face-down cards
+                const faceDownDiv = document.createElement('div');
+                faceDownDiv.textContent = "Face-Down: " + playerHand.faceDown.length;
+                playerHandDiv.appendChild(faceDownDiv);
+
+                playerHandsElement.appendChild(playerHandDiv);
+            });
+        }
+
+        // Used in the display of cards in a players hand, this is what shows up on the card 
+        function getCardDisplayName(card) {
+            return card.value;
+        }
+
+        // Function that simulates trying to play a card, it will get the index of the one they tried to play and then:
+        // Check if the card they tried to play is a valid play, if so, then add it to the pile, otherwise display an error message as to why
+        function playCard(cardIndex) {
+            const currentPlayerHand = playerHands[currentPlayerIndex];
+            const card = currentPlayerHand.hand[cardIndex];
+
+            // Check if the card is in the hand or face-up cards
+            if (!currentPlayerHand.hand.includes(card) && !currentPlayerHand.faceUp.includes(card)) {
+                displayErrorMessage('You cannot play this card yet.'); // Display error message
+                return;
+            }
+
+
+            // If the card is face-up, check if it can be played
+            if (currentPlayerHand.faceUp.includes(card)) {
+                if (!currentPlayerHand.hand.length && !currentPlayerHand.faceDown.length) {
+                    displayErrorMessage('You must play face-up cards only when your hand is empty.'); // Display error message
+                    return;
+                }
+
+                // Move the face-up card to the pile
+                currentPlayerHand.faceUp.splice(currentPlayerHand.faceUp.indexOf(card), 1);
+                pile.push(card);
+                updatePileValue(card);
+                updateUI();
+                nextTurn();
+                return;
+            }
+
+            // If the card is face-down, check if it can be played
+            if (currentPlayerHand.faceDown.includes(card)) {
+                if (!currentPlayerHand.hand.length && !currentPlayerHand.faceUp.length) {
+                    displayErrorMessage('You must play face-down cards only when both your hand and face-up cards are empty.'); // Display error message
+                    return;
+                }
+
+                // Move the face-down card to face-up
+                currentPlayerHand.faceDown.splice(currentPlayerHand.faceDown.indexOf(card), 1);
+                currentPlayerHand.faceUp.push(card);
+                updateUI();
+                return;
+            }
+
+            // If the card is in the hand, proceed with normal play
+            if (!pileValue || isValidPlay(card)) {
+                currentPlayerHand.hand.splice(cardIndex, 1);
+                console.log(`${players[currentPlayerIndex]} played ${getCardDisplayName(card)}`);
+                pile.push(card); // Add the card to the pile if it was a valid play
+                updatePileValue(card);
+                // If they play a 10 clear the pile and let them go again
+                if (card.value === '10') {
+                    console.log('Pile cleared!');
+                    pileValue = null;
+                    pile = []; // Clear the pile
+                }
+
+                // Check if the game is over after the player's move (If this was the game-ending move)
+                const gameOverStatus = isGameOver();
+                if (gameOverStatus) {
+                    // Post some messages indicating who won in the console
+                    console.log(`${gameOverStatus.winners.join(' and ')} are the winners!`);
+                    console.log(`${gameOverStatus.shithead} is the Shithead!`);
+
+                    // Post those same messages on the page so they can see it
+                    const currentPlayerElement = document.getElementById('current-player');
+                    currentPlayerElement.textContent = `${gameOverStatus.winners.join(' and ')} are the winners! ${gameOverStatus.shithead} is the Shithead!`;
+                    // Console some messages to let people know and then end the game with a return
+                    return;
+                }
+
+                // Check for if a quartet was made after each card is played
+                if (checkForQuartets()) {
+                    console.log(`It's still ${players[currentPlayerIndex]}'s turn because they completed the quartet.`);
+                }
+                else { // For any non-quartet play...
+                    // Draw a card if the hand has less than 3 cards
+                    while (playerHands[currentPlayerIndex].hand.length < 3 && deck.length > 0) {
+                        drawCardToHand(playerHands[currentPlayerIndex].hand);
+                    }
+
+                    // Update the interface to reflect the newly played card
+                    updateUI();
+                    if (!isGameOver() && card.value !== '10') {
+                        nextTurn(); // Move to the next player's turn UNLESS a 10 was played
+                    } else {
+                        console.log(`It's still ${players[currentPlayerIndex]}'s turn.`);
+                    }
+                }
+            } else { // IF AN INVALID PLAY WAS ATTEMPTED
+                let errorMessage;
+                const topCard = pile[pile.length - 1];
+                // If a letter card, show the letter and the value associated with it, if a numeric card, only show the numeric value so it's not redundant
+                const displayValue = ['J', 'Q', 'K', 'A'].includes(card.value) ? `${getCardDisplayName(card)}
+                 (${card.value === 'J' ? 11 : card.value === 'Q' ? 12 : card.value === 'K' ? 13 : 14})` : card.value;
+
+                // If the move was not valid, display an error message that tells them why
+                if (topCard && topCard.value === '8') {
+                    errorMessage = `The card you attempted to play (${displayValue}) does not beat an 8 which is storing: (${pileValue})`;
+                }
+                else if (topCard && topCard.value === '9') {
+                    errorMessage = `The card you attempted to play (${displayValue}) cannot be played on a (${pileValue}), it must be 9 or lower.`;
+                }
+                else {
+                    errorMessage = `The card you attempted to play (${displayValue}) does not match or beat the current pile value (${pileValue})`;
+                }
+                // Now slap that error message into the div
+                displayErrorMessage(errorMessage);
+            }
+        }
+
+        // Function used to set the pile value based on the card the user played
+        function updatePileValue(card) {
+            switch (card.value) {
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                    // For 2, 3, 4, 5, 6, 7 just set the pile value to that respective value
+                    pileValue = card.value;
+                    break;
+                case '8':
+                    // 8 should not change the pile value unless it's the first card played on an empty pile
+                    if (pileValue == null) { // If empty pile
+                        pileValue = card.value; // set to 8
+                    }
+                    break;
+                case '9':
+                    pileValue = card.value; // set to 9
+                    break;
+                case 'J':
+                    pileValue = '11';
+                    break;
+                case 'Q':
+                    pileValue = '12';
+                    break;
+                case 'K':
+                    pileValue = '13';
+                    break;
+                case 'A':
+                    pileValue = '14';
+                    break;
+                case '10':
+                    pileValue = null; // 10 destroys the pile so set it to null as an additional failsafe
+                    displayErrorMessage(''); // Clear the error message field so it doesn't continue to show
+                    break;
+                default:
+                    // Do nothing.
+                    // This should only be reached if they tried to hack the game and play a card not on this case list
+                    break;
+            }
+        }
+
+        // Function used to check if the card they tried to play is a valid play based on the rules of shithead
+        function isValidPlay(card) {
+            if (!pileValue) {
+                return true; // Any card can be played if the pile is empty
+            }
+
+            // Always playable special cards (2, 8 , 10) can always be played
+            if (AlwaysPlayableSpecialCards.includes(card.value)) {
+                return true;
+            }
+
+            // For all the other rule respecting cards... follow this logic...
+            switch (pileValue) {
+                case '2':
+                case '3':
+                    return true; // Allow all cards to be played on pile value 2 and 3
+                case '4':
+                    return card.value !== '3'; // Allow all cards except 3 for pile value 4
+                case '5':
+                    return card.value !== '3' && card.value !== '4'; // Allow all cards except 3 and 4 for pile value 5
+                case '6':
+                    return card.value !== '3' && card.value !== '4' && card.value !== '5'; // Allow all cards except 3, 4, and 5 for pile value 6
+                case '7':
+                    return card.value !== '3' && card.value !== '4' && card.value !== '5' && card.value !== '6'; // Allow all cards except 3, 4, 5, and 6 for pile value 7
+                case '8':
+                    return card.value !== '3' && card.value !== '4' && card.value !== '5' && card.value !== '6' && card.value !== '7'; // Allow all cards except 3, 4, 5, 6, and 7 for pile value 8
+                // (only happens if 8 is the first card played on a blank pile, where it acts as a numerical 8)
+                case '9':
+                    return !['J', 'Q', 'K', 'A'].includes(card.value); // Allow all cards except J, Q, K, and A for pile value 9. (Must be 9 or lower for this special case)
+                case '11':
+                    return ['J', 'Q', 'K', 'A'].includes(card.value); // Allow J, Q, K, and A for pile value 11 (J)
+                case '12':
+                    return ['Q', 'K', 'A'].includes(card.value); // Allow Q, K, and A for pile value 12 (Q)
+                case '13':
+                    return ['K', 'A'].includes(card.value); // Allow K and A for pile value 13 (K)
+                case '14':
+                    return card.value === 'A'; // Allow only A for pile value 14 (A)
+                default:
+                    return false; // Default case, invalid play, this should not be reached unless they tried to hack the game values to invalid
+            }
+        }
+
+        // Function used to check for quartets on the pile (4 of the same card in a row)
+        function checkForQuartets() {
+            if (pile.length >= 4) { // If pile length is at least 4...
+                const topFourCards = pile.slice(-4); // Get the top four cards from the pile
+                const quartetValue = topFourCards[0].value; // Get the value of the first card in the quartet to determine if the next 3 match it
+                const isQuartet = topFourCards.every(card => card.value === quartetValue); // Check if all four cards have the same value
+                if (isQuartet) { // If this is TRUE
+                    console.log(`Quartet of 4 of the same card! Clearing the pile, and the current player goes again!`);
+                    pile = []; // Clear the pile
+                    pileValue = null; // Reset the pile value to null as a failsafe
+                    // Draw a card if necessary immediately after clearing the pile (so they still have 3 cards in hand)
+                    while (playerHands[currentPlayerIndex].length < 3 && deck.length > 0) {
+                        drawCardToHand(playerHands[currentPlayerIndex]);
+                    }
+                    updateUI(); // Update the UI to reflect the changes
+                    return true; // Yes a quartet happened
+                }
+                else {
+                    return false; // No quartet happened
+                }
+            }
+        }
+
+
+        // Function used to check if the game is over, if there's a new "Shithead"
+        function isGameOver() {
+            // Check how many empty hands there are
+            let emptyHands = [];
+            for (let i = 0; i < playerHands.length; i++) {
+                if (playerHands[i].length === 0) {
+                    emptyHands.push(players[i]);
+                }
+            }
+            // Debugging print statements
+            //console.log("Empty Hands Count:", emptyHands.length);
+            //console.log("Total Player Hands:", playerHands.length);
+
+            // Game is over if all but one player's hand is empty (that last remaining player is the shithead)
+            if (emptyHands.length === playerHands.length - 1) {
+                const shithead = players.find(player => !emptyHands.includes(player));
+                return { winners: emptyHands, shithead };
+            }
+            return null;
+        }
+
+        // Used to update the div to show the current player name
+        function displayCurrentPlayer() {
+            const currentPlayerElement = document.getElementById('current-player');
+            currentPlayerElement.textContent = `Current Player: ${players[currentPlayerIndex]}`;
+        }
+
+        // Function used to advance the turn
+        function nextTurn() {
+            // Theoretically should assist in determining who still needs to play
+            let nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+
+            // Loop until finding a player with cards (still in the game) or determine the game is over
+            while (playerHands[nextPlayerIndex].length === 0 && !isGameOver()) {
+                nextPlayerIndex = (nextPlayerIndex + 1) % players.length;
+            }
+
+            // Proceed to the next player if the current player's hand is not empty
+            if (!isGameOver()) {
+                currentPlayerIndex = nextPlayerIndex;
+                // Draw a card if the hand contains less than 3 cards and the deck still has cards to draw from
+                while (playerHands[currentPlayerIndex].length < 3 && deck.length > 0) {
+                    drawCardToHand(playerHands[currentPlayerIndex]);
+                }
+                // Say who's turn it is so they know, and so I know for debugging purposes
+                console.log(`It's ${players[currentPlayerIndex]}'s turn.`);
+
+                // Update the interface and clear error messages
+                updateUI();
+                displayCurrentPlayer();
+                displayErrorMessage('');
+            }
+        }
+
+        // Draw a card from the deck if the hand is less than 3, and update the UI to show that new card
+        function drawCardToHand(hand) {
+            if (deck.length > 0 && hand.length < 3) {
+                const drawnCard = deck.shift(); // Draw a card from the deck
+                hand.push(drawnCard); // Add the drawn card to the player's hand
+                updateUI();
+                console.log(`Player ${currentPlayerIndex + 1} drew ${getCardDisplayName(drawnCard)}`);
+                // Log the drawn card to the console so I can tell (In the case they drew a 10 after a 10 I can tell that it worked correctly)
+            }
+        }
+
+        // Used to update the error message div to show the error message
+        function displayErrorMessage(message) {
+            const errorMessageElement = document.getElementById('error-message');
+            errorMessageElement.textContent = message;
+        }
+
+        // Used to shuffle the deck in random order after it is created
+        function shuffle(deck) {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        // Function that adds the pile to the hand of the player who clicked on it
+        function pickUpPile() {
+            // Dump the cards in the pile to the hand of the player who clicked on it
+            playerHands[currentPlayerIndex].push(...pile);
+
+            // Set the pile to empty and value to null, then update the interface and advance the turn
+            pile = [];
+            pileValue = null;
+            updateUI();
+            nextTurn();
+        }
+
+
+    </script>
+</body>
+
+</html>

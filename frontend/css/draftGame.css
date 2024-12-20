@@ -1,0 +1,51 @@
+#game {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hand {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.card {
+    width: 50px;
+    height: 80px;
+    border: 1px solid black;
+    margin: 0 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+#pile {
+    margin-top: 20px;
+    position: relative;
+}
+
+#pile:hover .card {
+    position: absolute;
+}
+
+#current-player {
+    margin-top: 10px;
+}
+
+#error-message {
+    color: red;
+    margin-top: 10px;
+}
+
+#pile-value {
+    margin-top: 5px;
+    font-size: 14px;
+    text-align: center;
+    white-space: pre-line;
+}
+
+.player-card {
+    background-color: #e6f2ff; 
+}
