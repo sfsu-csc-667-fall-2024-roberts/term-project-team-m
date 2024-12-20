@@ -734,8 +734,8 @@ function checkWin() {
             player1FaceDowns.length === 0
         ) {
             const player1WinDiv = document.getElementById("player1WinDetection");
-            player1WinDiv.innerHTML = `<h3>${player1Name} has won and is NOT the shithead!</h3>`;
-            bigHeaderWinDiv.innerHTML = `<h3>${player1Name} has won and is NOT the shithead!</h3>`;
+            player1WinDiv.innerHTML = `<h3>${player1Name} has won!</h3>`;
+            bigHeaderWinDiv.innerHTML = `<h3>${player1Name} has won!</h3>`;
             // Disable further interactions when a player wins
             document.getElementById("player1-hand").innerHTML = "";
             document.getElementById("player2-hand").innerHTML = "";
@@ -750,8 +750,8 @@ function checkWin() {
             player2FaceDowns.length === 0
         ) {
             const player2WinDiv = document.getElementById("player2WinDetection");
-            player2WinDiv.innerHTML = `<h3>${player2Name} has won and is NOT the shithead!</h3>`;
-            bigHeaderWinDiv.innerHTML = `<h3>${player2Name} has won and is NOT the shithead!</h3>`;
+            player2WinDiv.innerHTML = `<h3>${player2Name} has won!</h3>`;
+            bigHeaderWinDiv.innerHTML = `<h3>${player2Name} has won!</h3>`;
 
             // Disable further interactions when a player wins
             document.getElementById("player1-hand").innerHTML = "";
