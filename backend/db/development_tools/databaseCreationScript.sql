@@ -45,17 +45,7 @@ CREATE TABLE Game_Users (
     left_at TIMESTAMP WITH TIME ZONE -- Left the game at this time
 );
 
-/* I don't believe this is necessary at the moment because the relevant fields are already stored in the games table
-CREATE TABLE GameStates (
-    FOREIGN KEY (gameID) REFERENCES Games(id),
-    -- Additional Info section
-    active BOOLEAN, -- Not really sure what this would be for since the game table itself tracks active
-    --FOREIGN KEY (currentTurnPlayer) REFERENCES Users(id), -- Whose turn is it
-    turnNumber int -- How many turns have been taken in this game
-);
-*/
 
--- NOTE, existing migrations seems to refer to this as standard_deck_cards so I have changed it to match what is there
 CREATE TABLE Standard_Deck_Cards(
     id SERIAL PRIMARY KEY,
     suit INTEGER, -- Suit of the card, doesn't affect gameplay but does matter if we want to display it in the UI

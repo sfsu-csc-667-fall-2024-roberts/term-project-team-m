@@ -9,10 +9,8 @@ const Sql = {
   // Note that this is ONLY for use in our backend (since it returns the password)
   FIND: "SELECT * FROM users WHERE email=$1",
 };
-
 const create = async (email, password) => {
   const hash = createHash("sha256").update(email).digest("hex");
-
   return db.one(Sql.INSERT, [email, password, hash]);
 };
 const exists = async (email) => {
@@ -20,14 +18,12 @@ const exists = async (email) => {
 };
 const find = async (email) => {
   const result = await db.oneOrNone(Sql.FIND, [email]);
-
   if (result === null) {
     throw "User with those credentials not found";
   } else {
     return result;
   }
 };
-
 export default {
   create,
   exists,

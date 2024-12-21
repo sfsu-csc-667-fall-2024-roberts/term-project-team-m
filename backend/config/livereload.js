@@ -11,7 +11,6 @@ export default function liveReload(app, staticFilesPath) {
         liveReloadServer.refresh("/");
       }, 100);
     });
-
     app.use(connectLiveReload());
   }
 }

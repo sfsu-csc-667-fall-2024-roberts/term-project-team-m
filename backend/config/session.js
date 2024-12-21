@@ -2,7 +2,6 @@ import connectPgSimple from "connect-pg-simple";
 import session from "express-session";
 
 let sessionMiddleware = undefined;
-
 export default function getSession() {
   if (sessionMiddleware === undefined) {
     return session({
@@ -13,6 +12,5 @@ export default function getSession() {
       secure: process.env.NODE_ENV === "production",
     });
   }
-
   return sessionMiddleware;
 }

@@ -4,16 +4,11 @@ import express from "express";
 import createError from "http-errors";
 import morgan from "morgan";
 import * as path from "path";
-
 import * as configure from "./config/index.js";
 import * as middleware from "./middleware/index.js";
 import * as routes from "./routes/index.js";
-
-// New imports used to fix the below error
-// TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string. Received undefined
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-
 // Imports for socket.io
 //import http from "http"; 
 import { Server as SocketIOServer } from "socket.io"; 
@@ -22,12 +17,7 @@ import { Server as SocketIOServer } from "socket.io";
 // so BACKEND_PATH is PROJECT_ROOT/backend
 const BACKEND_PATH = import.meta.dirname;
 
-// The original lines provided in the starter code that do not work on my Windows system
-//const STATIC_PATH = path.join(BACKEND_PATH, "static");
-//const VIEW_PATH = path.join(BACKEND_PATH, "routes");
 
-// Alternative method that works on my local Windows machine, seems to be needed because starter code is using imports / modules instead of "requires"
-/**/
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const STATIC_PATH = join(__dirname, "static");

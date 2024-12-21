@@ -28,7 +28,6 @@ async function getUserId() {
     }
 }
 
-
 // Print the data that is given to the ejs file to render
 console.log("Inside of gameHelper.js file.....");
 console.log("GameID is " + gameID);
@@ -61,13 +60,11 @@ function sendPostRequest(url, body) {
             // This only happens when you try to play someone else's card
             if (response.status == 111) {
                 return false;
-
             }
             if (response.ok) {
                 // Let me know it was successful
                 console.log('Finished a post request..');
                 return true;
-
             } else {
                 response.json().then(data => {
                     // Let me know it had an error
@@ -80,9 +77,7 @@ function sendPostRequest(url, body) {
             console.error('Error:', error);
         });
     return true;
-
 }
-
 
 // Revised getUserHand to handle the case when those parts are empty
 function getUserHand(userId) {
@@ -90,10 +85,6 @@ function getUserHand(userId) {
         return [player1Hand, "player1Hand"];
     } else if (player2Hand && player2Hand.length > 0 && player2Hand[0].user_id == userId) {
         return [player2Hand, "player2Hand"];
-        // } else if (player3Hand && player3Hand.length > 0 && player3Hand[0].user_id == userId) {
-        //     return [player3Hand, "player3Hand"];
-        // } else if (player4Hand && player4Hand.length > 0 && player4Hand[0].user_id == userId) {
-        //     return [player4Hand, "player4Hand"];
     }
 
     return null; // Return null if user's hand is not found
@@ -101,17 +92,6 @@ function getUserHand(userId) {
 
 // Function that takes a card from the drawingDeck and assigns it to a player
 function drawCardFromDrawDeck(userId) {
-    // This function will query the database for the first card it finds that is in location "drawingDeck"
-    // Then it will give it to a specific player's hand
-    // var drawnCard = drawingDeck[0];
-    // getUserId()
-    // drawnCard.location = 'player1Hand'
-    // drawnCard.user_id = 1
-    // "UPDATE game_cards SET user_id=$1, location=$2 WHERE game_id=$3 AND id = ANY($4::int[])",
-    // 
-    //    const requestData = {
-    //         cardUpdate: drawnCard,
-    //    }
     console.log('Drawing a card from the draw deck...');
 
     console.log('---------------------------------------------')
@@ -141,41 +121,23 @@ function drawCardFromDrawDeck(userId) {
     sendPostRequest(url, body);
 }
 
-
-
 function pickUpPlayingPile() {
     // When the playing pile is clicked, this function triggers.
-
     // First off, check if there are at least two players in the game
     if (users.length < 2) {
         alert("You can't pick up the pile because there are not enough players in the game for it to start!");
         return;
     }
-
     // Check if the playingPile actually has anything in it
     if (playingPile.length < 1) {
         alert("You can't pick up the pile because there is nothing in it!");
         return;
     }
-
     // If there are at least 2 players then check if the person who triggered this (viewer) is in the game
     if (viewerUserID !== users[0].id && viewerUserID !== users[1].id) {
         alert("You can't do that, you're not in this game!");
         return;
     }
-
-    //alert("You clicked on the playing pile! All the cards in it have been added to your hand!");
-
-    // This function would then query the database for all cards in this game_id where location is "playingPile"
-    // Then for those, change theiri userID from null to the user who clicked on it, and the location to the hand of the user who clicked on it
-    // var PlayingPile = playingPile;
-    // drawnCard.location = 'player1Hand'
-    // drawnCard.user_id = 1
-    // "UPDATE game_cards SET user_id=$1, location=$2 WHERE game_id=$3 AND id = ANY($4::int[])",
-    // 
-    //    const requestData = {
-    //         cardUpdate: drawnCard,
-    //    }
     console.log('---------------------------------------------')
     console.log(playingPile)
     console.log('---------------------------------------------')
@@ -253,13 +215,10 @@ function playSpecialCardTen(cardIdOfTheTen, user_id) {
     playingPile.push({ id: cardIdOfTheTen }); // Add the ten to the playing pile so it isn't still there after this runs
     console.log("Playing pile in specialCardTen function" + playingPile);
     console.log('---------------------------------------------')
-
     let url = '/games/pile/' + gameID; // Prepare url to send a request to the pile route which will handle this
     let cardIds = playingPile.flatMap((card) => card.id); // Map card id's from the playing pile into a flat map so it can be sent into the request
     console.log("Card ID's of cards in the pile are: " + cardIds);
-
     let locationToSend = "discarded";
-
     let body = JSON.stringify({
         game_id: gameID,
         location: locationToSend,
@@ -275,39 +234,27 @@ function playSpecialCardTen(cardIdOfTheTen, user_id) {
     }
 }
 
-
 // Function called when someone plays a facedown, which will play the card even if it doesn't beat the pile...
 // If it doesn't beat the pile value, then it will add the entire pile to your hand
 // If it does... then continue as normal
 function playFaceDownCard(wasValidPlay, cardIdOfTheFaceDown) {
-
     if (wasValidPlay) {
-        // If it was a valid move, no special things are needed, so exit this function:
         return;
     }
-
     else {
         console.log('---------------------------------------------')
         // Add the faceDown card id to the playingPile
         playingPile.push({ id: cardIdOfTheFaceDown }); // Add the ten to the playing pile so it isn't still there after this runs
         console.log("Playing facedown in playFaceDownCard" + playingPile);
         console.log('---------------------------------------------')
-
         let url = '/games/pile/' + gameID; // Prepare url to send a request to the pile route which will handle this
         let cardIds = playingPile.flatMap((card) => card.id); // Map card id's from the playing pile into a flat map so it can be sent into the request
         console.log("Card ID's of cards in the pile are: " + cardIds);
-
         let locationToSend;
-
-        // Check whose turn it is and if the viewer is the current player
-        // If this game is currently on player 1's turn
         if (gameTurn === 1) {
-            // Send to player1Hand
             locationToSend = 'player1Hand';
         }
-        // If this game is currently on player 2's turn
         else if (gameTurn === 2) {
-            // Then set the location to send to player2Hand so it goes to their hand
             locationToSend = 'player2Hand';
         }
 
@@ -320,7 +267,6 @@ function playFaceDownCard(wasValidPlay, cardIdOfTheFaceDown) {
         
         // Send a post request to the route in order to have it place the pile cards in their hand
         sendPostRequest(url, body);
-
         alert("Yikes! Your facedown card was not good enough to beat the pile value and you've had to pick it up!");
 
         // Send a post request to the route that should change the player turn for this game so it advances player turn
