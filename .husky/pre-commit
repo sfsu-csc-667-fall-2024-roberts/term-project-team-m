@@ -1,0 +1,8 @@
+#!/bin/sh
+
+. "$(dirname "$0")/_/husky.sh"
+
+# I don't know what this is, but it prevents me from committing on windows because it says no PATH for npx found in environment variables
+# Even though I do have a path pointing to the nodejs folder which has npx in it.
+# therefore I have to comment this out to commit.
+#npx lint-staged

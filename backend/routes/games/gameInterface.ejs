@@ -1,0 +1,272 @@
+<!-- 
+  This is how the game is rendered on the page when you actually join a game, or are viewing one in progress
+
+  This should actually be called "game interface", I changed it 
+
+-->
+
+<%- include('../layout/header', { suppressHeader: true }) %>
+
+<style>
+
+#playingPileCard span {
+  font-size: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+#currentTurn {
+  font-size: 18px;
+  font-weight: bold;
+  border: 2px solid blue;
+  border-radius: 30%;
+  background-color: lightblue;
+}
+
+#whoAmI{
+  font-style: italic;
+}
+
+.highlight {
+    color: blue;
+    font-style: normal;
+    font-weight: bold;
+    font-size: larger;
+    border-bottom: 4px dotted black;
+  }
+
+  .highlightWhoAmI {
+    color: blue;
+    font-weight: bold;
+    border-bottom: 4px dotted black;
+  }
+
+</style>
+
+<script>
+  // Define variables that store what was given to this page from the gameData during render in index.js
+  // These will be access by the external javascript file, gameHelper.js to do things to this page
+  var gameID = JSON.parse('<%- JSON.stringify(gameID) %>');
+  var description = JSON.parse('<%- JSON.stringify(description) %>');
+  var users = JSON.parse('<%- JSON.stringify(users) %>');
+  var player1Hand = JSON.parse('<%- JSON.stringify(player1Hand) %>');
+  var player1FaceUps = JSON.parse('<%- JSON.stringify(player1FaceUps) %>');
+  var player1FaceDowns = JSON.parse('<%- JSON.stringify(player1FaceDowns) %>');
+  var player2Hand = JSON.parse('<%- JSON.stringify(player2Hand) %>');
+  var player2FaceUps = JSON.parse('<%- JSON.stringify(player2FaceUps) %>');
+  var player2FaceDowns = JSON.parse('<%- JSON.stringify(player2FaceDowns) %>');
+  var drawingDeck = JSON.parse('<%- JSON.stringify(drawingDeck) %>');
+  var playingPile = JSON.parse('<%- JSON.stringify(playingPile) %>');
+  var pileValue = JSON.parse('<%- JSON.stringify(pileValue) %>');
+  var gameTurn = JSON.parse('<%- JSON.stringify(gameTurn) %>');
+  
+  // Retrieve the user who is looking at this page from local session
+  var user = JSON.parse('<%- JSON.stringify(user) %>');
+  var viewerUserID = user.id;
+  console.log("viewerUserID is: " + viewerUserID);
+</script>
+
+<!-- This appears to let me import this exernal script as a source without the starter code trying to read it as a game route -->
+<script defer type='text/javascript' src="/js/gameHelper.js"></script>
+<!-- <script defer type="module" src="/js/gameHelper.js"></script> -->
+
+<!-- Game name (aka description) displays here -->
+<h2 class="text-2xl font-bold">You are in the Game: '<%= description %>'</h2>
+
+<!-- Div that displays who you are signed in as and extra depending on if you are or are not in this game -->
+<div id="whoAmI" class="text-2xl font-bold">
+  <% if (user.email === users[0]?.email || user.email === users[1]?.email) { %>
+    <span class="highlightWhoAmI">You are: <%= user.email.substring(0, user.email.indexOf("@")) %></span>
+  <% } else { %>
+    You are spectating this game because you are not a user in it
+  <% } %>
+</div>
+
+<h2 id="bigHeaderWin" class="text-4xl font-bold flex flex-col items-center mr-10">
+  <!-- Content in here will be replaced by the win detection function -->
+</h2>
+
+  <!-- Main content area (Game Display) -->
+  <!-- Goes across 80% of the page -->
+  <div class="flex flex-col items-center mr-10" style="width: 80%;">
+    <!-- Player 2 (Top) -->
+    <div class="flex flex-col items-center mt-10">
+      <!-- Player 2's In-hand cards -->
+      <div id="player2-hand" class="flex mb-6">
+        <div class="flex mb-6">
+          <% if (player2Hand.length > 0) { %>
+            <% player2Hand.forEach((card, i) => { %>
+              <div class="<%= user.id === card.user_id ? 'card' : 'card card-facedown' %>" onclick="handleCardClick('player2Hand', '<%= card.id %>', '<%= card.card_name %>', '<%= card.user_id %>')">
+                <span><%= user.id === card.user_id ? 'P2 Hand: ' + card.card_name : '' %></span>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <!-- Placeholder for empty hand for if a second player has not joined yet -->
+            <div class="card"><span>No cards in hand</span></div>
+          <% } %>
+        </div>
+      </div>
+    
+      <!-- Player 2's Face-up cards -->
+      <div class="flex mb-6">
+        <% player2FaceUps.forEach(card => { %>
+          <div class="card" onclick="handleCardClick('player2FaceUps', '<%= card.id %>', '<%= card.card_name %>', '<%= card.user_id %>')">
+            <span>P2 FaceUp: <%= card.card_name %></span>
+          </div>
+        <% }) %>
+      </div>
+    
+      <!-- Player 2's Face-down cards -->
+      <div class="flex mb-6">
+        <% player2FaceDowns.forEach(card => { %>
+          <div class="card card-facedown" onclick="handleCardClick('player2FaceDowns', '<%= card.id %>', '<%= card.card_name %>', '<%= card.user_id %>')">
+            <span></span> <!-- Intentionally blank -->
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- The part of the page that says who player 2 is -->
+      <div class="flex flex-col items-center">
+        <% if (users.length > 1) { %>
+          <img
+            src="https://gravatar.com/avatar/<%= users[1].gravatar %>"
+            class="h-10 w-10 rounded-full"
+          />
+          <p class="font-bold text-gray-800 <%= user.email === users[1].email ? 'highlight' : '' %>">
+            <%= users[1].email.substring(0, users[1].email.indexOf("@")) %>
+          </p>
+          <div class="text-gray-600 text-s">
+            <%= player2Hand.length + player2FaceUps.length + player2FaceDowns.length %> cards left
+          </div>
+        <% } else { %>
+          <div class="text-gray-600 text-s">Waiting for player to join...</div>
+        <% } %>
+      </div>
+      
+      <div id="currentTurn">
+        <% if (gameTurn === 1 && users.length > 0) { %>
+          
+        <% } else if (gameTurn === 2 && users.length > 1) { %>
+          It is <%= users[1].email.substring(0, users[1].email.indexOf("@")) %>'s turn
+        <% } %>
+      </div>
+
+      <!-- Text box for player 2 win detection -->
+      <div id="player2WinDetection" class="text-4xl font-bold">
+        <!-- This will be replaced by a function if player 2 is detected to have won -->
+      </div>
+
+    </div> <!-- End of player 2 related sections -->
+
+    <!-- Middle Row (Drawing Deck and Playing Pile) -->
+
+    <div class="flex items-center mt-10">
+      <div class="flex flex-col items-center mr-10">
+        <!-- Drawing Deck -->
+        <div class="card card-facedown mb-6" onclick="handleDrawingDeckClick()">
+          <!-- Could put something here, will probably leave blank though, just the count of cards still in this drawing deck -->
+        </div>
+        <p class="font-bold text-gray-800">Drawing Deck</p>
+        <span><%= drawingDeck.length %> cards remain</span>
+      </div>
+      
+      
+      <div class="flex flex-col items-center ml-10">
+        <!-- Playing Pile -->
+        <div id="playingPileCard" class="card mb-6" onclick="pickUpPlayingPile()">  </div>
+        <p class="font-bold text-gray-800">Playing Pile</p>
+        <span><%= playingPile.length %> cards in pile</span>
+
+        <!-- New section displaying pileValue that is stored in the games table
+        <p class="font-bold text-gray-800">Pile Value:</p>
+        <span id="pile-value"><%= pileValue %></span> -->
+      </div>
+
+    </div> 
+    <!-- End of div that is for info related to the playing pile -->
+
+    <!-- Player 1 (Bottom) -->
+
+    <!-- Text box for player 1 win detection -->
+    <div id="player1WinDetection" class="text-4xl font-bold">
+      <!-- This will be replaced by a function if player 1 is detected to have won -->
+    </div>
+
+    <div class="flex flex-col items-center mt-10">
+      <div id="currentTurn">
+        <% if (gameTurn === 1 && users.length > 0) { %>
+          It is <%= users[0].email.substring(0, users[0].email.indexOf("@")) %>'s turn
+        <% } else if (gameTurn === 2 && users.length > 1) { %>
+          
+        <% } %>
+      </div>
+
+      <!-- Player 1's Face-down cards -->
+      <div class="flex mb-6">
+        <% player1FaceDowns.forEach(card => { %>
+          <div class="card card-facedown" onclick="handleCardClick('player1FaceDowns', '<%= card.id %>', '<%= card.card_name %>', '<%= card.user_id %>')">
+            <span></span> <!-- Intentionally blank -->
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- Player 1's Face-up cards -->
+      <div class="flex mb-6">
+        <% player1FaceUps.forEach(card => { %>
+          <div class="card" onclick="handleCardClick('player1FaceUps', '<%= card.id %>', '<%= card.card_name %>', '<%= card.user_id %>')">
+            <span>P1 Faceup: <%= card.card_name %></span>
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- Player 1's In-hand cards -->
+      <div id="player1-hand" class="flex mb-6">
+        <div class="flex mb-6">
+          <% if (player1Hand.length > 0) { %>
+            <% player1Hand.forEach((card, i) => { %>
+              <div class="<%= user.id === card.user_id ? 'card' : 'card card-facedown' %>" onclick="handleCardClick('player1Hand', '<%= card.id %>', '<%= card.card_name %>', '<%= card.user_id %>')">
+                <span><%= user.id === card.user_id ? 'P1 Hand: ' + card.card_name : '' %></span>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <!-- Placeholder for empty hand -->
+            <div class="card"><span>No cards in hand</span></div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- The part of the page that says who player 1 is -->
+      <div class="flex flex-col items-center">
+        <% if (users.length > 0) { %>
+          <img
+            src="https://gravatar.com/avatar/<%= users[0].gravatar %>"
+            class="h-10 w-10 rounded-full"
+          />
+          <p class="font-bold text-gray-800 <%= user.email === users[0].email ? 'highlight' : '' %>">
+            <%= users[0].email.substring(0, users[0].email.indexOf("@")) %>
+          </p>
+          <div class="text-gray-600 text-s">
+            <%= player1Hand.length + player1FaceUps.length + player1FaceDowns.length %> cards left
+          </div>
+        <% } else { %>
+          <div class="text-gray-600 text-s">Waiting for player 1 to join?????</div>
+          <!-- This shouldn't happen, but, at least put something there if it does so I know -->
+        <% } %>
+      </div>
+
+    </div> <!-- End of player 1 section -->
+</div> <!-- End of game display 80% -->
+
+  <!-- Chat messages on the right -->
+  <div class="w-1/5 ml-10">
+    <div class="basis-1/3">
+      <%- include("../chat/chat") %>
+    </div>
+  </div>
+</div>
+
+
+
+<%- include('../layout/footer') %>

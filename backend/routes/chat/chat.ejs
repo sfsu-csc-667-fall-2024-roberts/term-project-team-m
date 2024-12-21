@@ -1,0 +1,178 @@
+<!--
+  This appears to be the HTML coding for the chatbox, currently on the lobby page and game page
+
+
+-->
+
+<head>
+  <!-- Import socket script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"
+    integrity="sha512-Xm9qbB6Pu06k3PUwPj785dyTl6oHxgsv9nHp7ej7nCpAqGZT3OZpsELuCYX05DdonFpTlBpXMOxjavIAIUwr0w=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+
+<!-- Moved the message form above the chat container so it doesn't keep inching down the page as more messages appear... -->
+<!-- New message form -->
+<div class="mt-6 flex gap-x-3">
+  <img src="https://gravatar.com/avatar/<%= user.gravatar %>" alt="<%= user.email %>"
+    class="h-6 w-6 flex-none rounded-full bg-gray-50" />
+  <form id="messageForm" class="relative flex-auto"> <!-- This form has an event listener on submit -->
+    <div
+      class="overflow-hidden rounded-lg pb-12 shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
+      <label for="messageInput" class="sr-only">Enter your message</label>
+      <input name="messageInput" id="messageInput"
+        class="block w-full resize-none border-0 bg-transparent py-1.5 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
+        placeholder="Enter your message..." />
+    </div>
+
+    <div class="absolute inset-x-0 bottom-0 flex flex-row-reverse py-2 pl-3 pr-2 w-full">
+      <button type="submit"
+        class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+        Send Message <!-- Here is the button text that you see on the lobby page -->
+      </button>
+
+    </div>
+  </form>
+</div>
+
+<!-- This is the actual chat box that you see on the page--->
+<!-- I tried to make this have a max height where it would then add a scrollbar but nothing I do seems to actually do it... -->
+<!-- Regardless I have converted it to run in reverse order to try and alleviate this issue -->
+<div class="max-h-[1000px] overflow-y-auto">
+  <ul id="chatContainer" role="list" class="space-y-6 flex-col-reverse max-h-[1000px] overflow-y-auto">
+    <!-- Chat messages will be prepended from the render message script into here -->
+  </ul>
+</div>
+
+
+<script>
+  // ___________________________________________________
+  // Client side scripts, apparently these don't work when put in index.js so I moved them back here.
+
+  // Fetch and render messages on page load
+  document.addEventListener('DOMContentLoaded', (event) => {
+    console.log('DOM Content Loaded, beginning sequence from chat/index.js...');
+    fetchAndRenderMessages();
+
+    // Initialize Socket.IO client
+    const socket = io();
+
+    socket.on('connect', () => {
+      console.log('Connected to server');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+
+    socket.on('chat:message', (message) => {
+      console.log('Received message:', message);
+      renderMessage(message);
+    });
+
+
+    // Listen for message form submission, when they do, try and post it to the database
+    document.getElementById('messageForm').addEventListener('submit', function (event) {
+      event.preventDefault(); // Don't redirect
+
+      const messageInput = document.getElementById('messageInput');
+      const message = messageInput.value.trim();
+
+      if (message.length > 0) {
+        fetch('/chat/submit-message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message: message })
+        })
+          .then(response => {
+            if (response.ok) {
+              console.log('Message sent successfully');
+              messageInput.value = ''; // Set input field blank so it's empty, now that they've sent it
+            } else {
+              console.error('Failed to send message');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      } else {
+        console.error('Message cannot be empty');
+      }
+    });
+
+    // _____________________________________________________________________________
+    // Function to render messages based on the provided template in the starter code
+    function renderMessage(message) {
+      const chatContainer = document.getElementById('chatContainer');
+
+      const newMessageItem = document.createElement('li');
+      newMessageItem.classList.add('relative', 'flex', 'gap-x-4');
+
+      // console.log("Adding these to the div...")
+      // console.log("Username will be: " + message.username);
+      // console.log("Timestamp will be: " + message.timestamp);
+      // console.log("Message will be: " + message.message);
+
+      newMessageItem.innerHTML = `
+            <div class="absolute left-0 top-0 flex w-6 justify-center -bottom-6">
+                <div class="w-px bg-gray-200"></div>
+            </div>
+            <img src="https://gravatar.com/avatar/<%= user.gravatar %>" alt="<%= user.email %>"
+                class="relative h-6 w-6 flex-none rounded-full bg-gray-50" />
+            <div class="flex-auto rounded-md p-3 ring-1 ring-inset ring-gray-200">
+                <div class="flex justify-between gap-x-4">
+                    <div class="py-0.5 text-xs leading-5 text-gray-500">
+                        <span class="font-medium text-gray-900">${message.username}</span> said
+                    </div>
+                    <time datetime="${new Date(message.timestamp).toISOString()}"
+                        class="flex-none py-0.5 text-xs leading-5 text-gray-500">
+                        ${formatDate(message.timestamp)}
+                    </time>
+                </div>
+                <p class="text-sm leading-6 text-gray-500">
+                    ${message.message}
+                </p>
+            </div>
+        `;
+
+      //console.log("Appending the child...");
+      chatContainer.prepend(newMessageItem);
+      //console.log("Should be done with this one render..");
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Function to fetch the messages from the database and display them on the page
+    // (So the chat history doesn't go away on page refresh)
+    async function fetchAndRenderMessages() {
+      //console.log("Inside fetch and render start");
+      try {
+        const response = await fetch('/chat/fetch-messages');
+
+        if (!response.ok) {
+          console.log("failed to fetch messages");
+          throw new Error('Failed to fetch messages');
+        }
+        console.log("Messages were fetched");
+        const messages = await response.json();
+        messages.forEach(message => {
+          renderMessage(message);
+        });
+
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    }
+
+  });
+
+  // Used to convert the database timestamp into something more readable
+  // Based on template found online
+  function formatDate(timestamp) {
+  const date = new Date(timestamp);
+  const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+  return date.toLocaleDateString('en-US', options);
+}
+</script>
